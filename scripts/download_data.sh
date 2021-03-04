@@ -3,6 +3,7 @@
 filename=vox-adv-cpk.pth.tar
 
 curl https://openavatarify.s3.amazonaws.com/weights/$filename -o $filename
+gdown https://drive.google.com/uc?id=1WSfYBqkiAB_-7TEb0YJRSfKDKLooS8aS
 
 echo "Expected checksum: 8a45a24037871c045fbb8a6a8aa95ebc"
 

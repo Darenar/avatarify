@@ -13,7 +13,6 @@ from afy.arguments import opt
 from afy.utils import info, Once, Tee, crop, pad_img, resize, TicToc
 import afy.camera_selector as cam_selector
 
-
 log = Tee('./var/log/cam_fomm.log')
 
 # Where to split an array from face_alignment to separate each landmark
@@ -21,7 +20,8 @@ LANDMARK_SLICE_ARRAY = np.array([17, 22, 27, 31, 36, 42, 48, 60])
 
 if _platform == 'darwin':
     if not opt.is_client:
-        info('\nOnly remote GPU mode is supported for Mac (use --is-client and --connect options to connect to the server)')
+        info(
+            '\nOnly remote GPU mode is supported for Mac (use --is-client and --connect options to connect to the server)')
         info('Standalone version will be available lately!\n')
         exit()
 
@@ -29,26 +29,26 @@ if _platform == 'darwin':
 def is_new_frame_better(source, driving, predictor):
     global avatar_kp
     global display_string
-    
+
     if avatar_kp is None:
         display_string = "No face detected in avatar."
         return False
-    
+
     if predictor.get_start_frame() is None:
         display_string = "No frame to compare to."
         return True
-    
+
     driving_smaller = resize(driving, (128, 128))[..., :3]
     new_kp = predictor.get_frame_kp(driving)
-    
+
     if new_kp is not None:
         new_norm = (np.abs(avatar_kp - new_kp) ** 2).sum()
         old_norm = (np.abs(avatar_kp - predictor.get_start_frame_kp()) ** 2).sum()
-        
+
         out_string = "{0} : {1}".format(int(new_norm * 100), int(old_norm * 100))
         display_string = out_string
         log(out_string)
-        
+
         return new_norm < old_norm
     else:
         display_string = "No face found!"
@@ -67,7 +67,8 @@ def load_stylegan_avatar():
 
     return image
 
-def load_images(IMG_SIZE = 256):
+
+def load_images(IMG_SIZE=256):
     avatars = []
     filenames = []
     images_list = sorted(glob.glob(f'{opt.avatars}/*'))
@@ -86,12 +87,25 @@ def load_images(IMG_SIZE = 256):
             filenames.append(f)
     return avatars, filenames
 
+
 def change_avatar(predictor, new_avatar):
     global avatar, avatar_kp, kp_source
     avatar_kp = predictor.get_frame_kp(new_avatar)
     kp_source = None
     avatar = new_avatar
     predictor.set_source_image(avatar)
+
+
+def plot_segments(predictor, to_plot_segments):
+    predictor.plot_segments(to_plot_segments)
+
+
+def change_hair_color(predictor):
+    predictor.change_hair_color()
+
+
+def change_lips_color(predictor):
+    predictor.change_lips_color()
 
 
 def draw_rect(img, rw=0.6, rh=0.8, color=(255, 0, 0), thickness=2):
@@ -102,13 +116,16 @@ def draw_rect(img, rw=0.6, rh=0.8, color=(255, 0, 0), thickness=2):
     d = h - u
     img = cv2.rectangle(img, (int(l), int(u)), (int(r), int(d)), color, thickness)
 
+
 def kp_to_pixels(arr):
     '''Convert normalized landmark locations to screen pixels'''
     return ((arr + 1) * 127).astype(np.int32)
 
+
 def draw_face_landmarks(img, face_kp, color=(20, 80, 255)):
     if face_kp is not None:
         img = cv2.polylines(img, np.split(kp_to_pixels(face_kp), LANDMARK_SLICE_ARRAY), False, color)
+
 
 def print_help():
     info('\n\n=== Control keys ===')
@@ -132,9 +149,12 @@ def print_help():
 def draw_fps(frame, fps, timing, x0=10, y0=20, ystep=30, fontsz=0.5, color=(255, 255, 255)):
     frame = frame.copy()
     cv2.putText(frame, f"FPS: {fps:.1f}", (x0, y0 + ystep * 0), 0, fontsz * IMG_SIZE / 256, color, 1)
-    cv2.putText(frame, f"Model time (ms): {timing['predict']:.1f}", (x0, y0 + ystep * 1), 0, fontsz * IMG_SIZE / 256, color, 1)
-    cv2.putText(frame, f"Preproc time (ms): {timing['preproc']:.1f}", (x0, y0 + ystep * 2), 0, fontsz * IMG_SIZE / 256, color, 1)
-    cv2.putText(frame, f"Postproc time (ms): {timing['postproc']:.1f}", (x0, y0 + ystep * 3), 0, fontsz * IMG_SIZE / 256, color, 1)
+    cv2.putText(frame, f"Model time (ms): {timing['predict']:.1f}", (x0, y0 + ystep * 1), 0, fontsz * IMG_SIZE / 256,
+                color, 1)
+    cv2.putText(frame, f"Preproc time (ms): {timing['preproc']:.1f}", (x0, y0 + ystep * 2), 0, fontsz * IMG_SIZE / 256,
+                color, 1)
+    cv2.putText(frame, f"Postproc time (ms): {timing['postproc']:.1f}", (x0, y0 + ystep * 3), 0,
+                fontsz * IMG_SIZE / 256, color, 1)
     return frame
 
 
@@ -199,10 +219,12 @@ if __name__ == "__main__":
     }
     if opt.is_worker:
         from afy import predictor_worker
+
         predictor_worker.run_worker(opt.in_port, opt.out_port)
         sys.exit(0)
     elif opt.is_client:
         from afy import predictor_remote
+
         try:
             predictor = predictor_remote.PredictorRemote(
                 in_addr=opt.in_addr, out_addr=opt.out_addr,
@@ -214,6 +236,7 @@ if __name__ == "__main__":
         predictor.start()
     else:
         from afy import predictor_local
+
         predictor = predictor_local.PredictorLocal(
             **predictor_args
         )
@@ -245,11 +268,11 @@ if __name__ == "__main__":
         else:
             enable_vcam = False
             # log("Virtual camera is supported only on Linux.")
-        
-        # if not enable_vcam:
-            # log("Virtual camera streaming will be disabled.")
 
-    cur_ava = 0    
+        # if not enable_vcam:
+        # log("Virtual camera streaming will be disabled.")
+
+    cur_ava = 0
     avatar = None
     change_avatar(predictor, avatars[cur_ava])
     passthrough = False
@@ -268,6 +291,8 @@ if __name__ == "__main__":
     is_calibrated = False
 
     show_landmarks = False
+
+    show_segments = True
 
     fps_hist = []
     fps = 0
@@ -297,7 +322,8 @@ if __name__ == "__main__":
             frame = frame[..., ::-1]
             frame_orig = frame.copy()
 
-            frame, (frame_offset_x, frame_offset_y) = crop(frame, p=frame_proportion, offset_x=frame_offset_x, offset_y=frame_offset_y)
+            frame, (frame_offset_x, frame_offset_y) = crop(frame, p=frame_proportion, offset_x=frame_offset_x,
+                                                           offset_y=frame_offset_y)
 
             frame = resize(frame, (IMG_SIZE, IMG_SIZE))[..., :3]
 
@@ -321,7 +347,7 @@ if __name__ == "__main__":
                 out = None
 
             tt.tic()
-            
+
             key = cv2.waitKey(1)
 
             if cv2.getWindowProperty('cam', cv2.WND_PROP_VISIBLE) < 1.0:
@@ -329,7 +355,7 @@ if __name__ == "__main__":
             elif is_calibrated and cv2.getWindowProperty('avatarify', cv2.WND_PROP_VISIBLE) < 1.0:
                 break
 
-            if key == 27: # ESC
+            if key == 27:  # ESC
                 break
             elif key == ord('d'):
                 cur_ava += 1
@@ -349,10 +375,8 @@ if __name__ == "__main__":
             elif key == ord('s'):
                 frame_proportion += 0.05
                 frame_proportion = min(frame_proportion, 1.0)
-            elif key == ord('H'):
-                frame_offset_x -= 1
             elif key == ord('h'):
-                frame_offset_x -= 5
+                change_hair_color(predictor)
             elif key == ord('K'):
                 frame_offset_x += 1
             elif key == ord('k'):
@@ -375,7 +399,7 @@ if __name__ == "__main__":
                 if not is_calibrated:
                     cv2.namedWindow('avatarify', cv2.WINDOW_GUI_NORMAL)
                     cv2.moveWindow('avatarify', 600, 250)
-                
+
                 is_calibrated = True
                 show_landmarks = False
             elif key == ord('z'):
@@ -388,8 +412,9 @@ if __name__ == "__main__":
                 output_flip = not output_flip
             elif key == ord('f'):
                 find_keyframe = not find_keyframe
-            elif key == ord('o'):
-                show_landmarks = not show_landmarks
+            elif key == ord("o"):
+                show_segments = not show_segments
+                plot_segments(predictor, show_segments)
             elif key == ord('q'):
                 try:
                     log('Loading StyleGAN avatar...')
@@ -399,13 +424,8 @@ if __name__ == "__main__":
                 except:
                     log('Failed to load StyleGAN avatar')
             elif key == ord('l'):
-                try:
-                    log('Reloading avatars...')
-                    avatars, avatar_names = load_images()
-                    passthrough = False
-                    log("Images reloaded")
-                except:
-                    log('Image reload failed')
+                change_lips_color(predictor)
+
             elif key == ord('i'):
                 show_fps = not show_fps
             elif 48 < key < 58:
@@ -418,7 +438,7 @@ if __name__ == "__main__":
                 log(key)
 
             if overlay_alpha > 0:
-                preview_frame = cv2.addWeighted( avatar, overlay_alpha, frame, 1.0 - overlay_alpha, 0.0)
+                preview_frame = cv2.addWeighted(avatar, overlay_alpha, frame, 1.0 - overlay_alpha, 0.0)
             else:
                 preview_frame = frame.copy()
 
@@ -429,20 +449,21 @@ if __name__ == "__main__":
                 draw_face_landmarks(preview_frame, avatar_kp, (200, 20, 10))
                 frame_kp = predictor.get_frame_kp(frame)
                 draw_face_landmarks(preview_frame, frame_kp)
-            
+
             if preview_flip:
                 preview_frame = cv2.flip(preview_frame, 1)
-                
+
             if green_overlay:
                 green_alpha = 0.8
                 overlay = preview_frame.copy()
                 overlay[:] = (0, 255, 0)
-                preview_frame = cv2.addWeighted( preview_frame, green_alpha, overlay, 1.0 - green_alpha, 0.0)
+                preview_frame = cv2.addWeighted(preview_frame, green_alpha, overlay, 1.0 - green_alpha, 0.0)
 
             timing['postproc'] = tt.toc()
-                
+
             if find_keyframe:
-                preview_frame = cv2.putText(preview_frame, display_string, (10, 220), 0, 0.5 * IMG_SIZE / 256, (255, 255, 255), 1)
+                preview_frame = cv2.putText(preview_frame, display_string, (10, 220), 0, 0.5 * IMG_SIZE / 256,
+                                            (255, 255, 255), 1)
 
             if show_fps:
                 preview_frame = draw_fps(preview_frame, fps, timing)
